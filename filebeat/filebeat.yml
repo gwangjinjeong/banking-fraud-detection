@@ -1,0 +1,72 @@
+# Docker 컨테이너 자동 발견 및 로그 수집
+filebeat.autodiscover:
+  providers:
+    - type: docker
+      hints.enabled: true
+      templates:
+        - condition:
+            contains:
+              docker.container.image: "kafka"
+          config:
+            - type: container
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              fields:
+                service: kafka
+              multiline.pattern: '^\['
+              multiline.negate: true
+              multiline.match: after
+
+        - condition:
+            contains:
+              docker.container.image: "elasticsearch"
+          config:
+            - type: container
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              fields:
+                service: elasticsearch
+              multiline.pattern: '^\[[0-9]{4}-'
+              multiline.negate: true
+              multiline.match: after
+
+        - condition:
+            contains:
+              docker.container.image: "logstash"
+          config:
+            - type: container
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              fields:
+                service: logstash
+
+processors:
+  - add_docker_metadata:
+      host: "unix:///var/run/docker.sock"
+      
+  - decode_json_fields:
+      fields: ["message"]
+      target: "log"
+      overwrite_keys: true
+      
+  - drop_event:
+      when:
+        or:
+          - contains:
+              message: "DEBUG"
+          - contains:
+              message: "TRACE"
+
+# Logstash로 전송
+output.logstash:
+  hosts: ["logstash:5044"]
+  bulk_max_size: 2048
+  
+# 로깅 설정
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644

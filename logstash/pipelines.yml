@@ -1,0 +1,17 @@
+- pipeline.id: input-kafka
+  path.config: "/usr/share/logstash/pipeline/10_input_kafka.conf"
+  pipeline.workers: 2
+  
+- pipeline.id: input-beats
+  path.config: "/usr/share/logstash/pipeline/11_input_beats.conf"
+  pipeline.workers: 1
+  
+- pipeline.id: input-tcp
+  path.config: "/usr/share/logstash/pipeline/12_input_tcp.conf"
+  pipeline.workers: 1
+  
+- pipeline.id: process-enrich
+  path.config: "/usr/share/logstash/pipeline/30_process_enrich.conf"
+  pipeline.workers: 4
+  pipeline.batch.size: 125
+  pipeline.batch.delay: 50
